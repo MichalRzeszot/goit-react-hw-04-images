@@ -52,7 +52,7 @@ const App = () => {
     setShowModal(!showModal);
     setLargeImageURL(imageUrl);
   };
-
+  //
   return (
     <div className={styles.appContainer}>
       <Searchbar onSubmit={handleSearchSubmit} />
