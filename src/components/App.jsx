@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import Searchbar from './Searchbar';
 import ImageGallery from './ImageGallery';
@@ -7,81 +7,67 @@ import Loader from './Loader';
 import Modal from './Modal';
 import styles from './App.module.css';
 
-class App extends Component {
-  state = {
-    searchQuery: '',
-    page: 1,
-    images: [],
-    isLoading: false,
-    showModal: false,
-    largeImageURL: '',
+const App = () => {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [page, setPage] = useState(1);
+  const [images, setImages] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [largeImageURL, setLargeImageURL] = useState('');
+  const apiKey = '41266476-bb46a0bfc74cc3a1da8946be1';
+
+  useEffect(() => {
+    if (!searchQuery) return;
+
+    const fetchImages = async () => {
+      setIsLoading(true);
+      try {
+        const response = await axios.get(
+          `https://pixabay.com/api/?q=${encodeURIComponent(
+            searchQuery
+          )}&page=${page}&key=${apiKey}&image_type=photo&orientation=horizontal&per_page=12`
+        );
+        setImages(prev => [...prev, ...response.data.hits]);
+      } catch (error) {
+        console.error('Error fetching data: ', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchImages();
+  }, [searchQuery, page]);
+
+  const handleSearchSubmit = query => {
+    setSearchQuery(query);
+    setPage(1);
+    setImages([]);
   };
 
-  componentDidUpdate(prevProps, prevState) {
-    if (
-      prevState.searchQuery !== this.state.searchQuery ||
-      prevState.page !== this.state.page
-    ) {
-      this.fetchImages();
-    }
-  }
-
-  handleSearchSubmit = query => {
-    this.setState({ searchQuery: query, page: 1, images: [] });
+  const handleLoadMore = () => {
+    setPage(prevPage => prevPage + 1);
   };
 
-  fetchImages = async () => {
-    const { searchQuery, page } = this.state;
-
-    if (this.state.isLoading) return;
-
-    this.setState({ isLoading: true });
-
-    const apiKey = '41266476-bb46a0bfc74cc3a1da8946be1';
-    const url = `https://pixabay.com/api/?q=${encodeURIComponent(
-      searchQuery
-    )}&page=${page}&key=${apiKey}&image_type=photo&orientation=horizontal&per_page=12`;
-
-    try {
-      const response = await axios.get(url);
-      this.setState(prevState => ({
-        images: [...prevState.images, ...response.data.hits],
-      }));
-    } catch (error) {
-      console.error('Error fetching data: ', error);
-    } finally {
-      this.setState({ isLoading: false });
-    }
+  const toggleModal = (imageUrl = '') => {
+    setShowModal(!showModal);
+    setLargeImageURL(imageUrl);
   };
 
-  toggleModal = (largeImageURL = '') => {
-    this.setState(({ showModal }) => ({
-      showModal: !showModal,
-      largeImageURL,
-    }));
-  };
-
-  handleLoadMore = () => {
-    this.setState(prevState => ({ page: prevState.page + 1 }));
-  };
-  render() {
-    const { images, isLoading, showModal, largeImageURL } = this.state;
-    return (
-      <div className={styles.appContainer}>
-        <Searchbar onSubmit={this.handleSearchSubmit} />
-        <ImageGallery images={images} onImageClick={this.toggleModal} />
-        {isLoading && <Loader />}
-        {images.length > 0 && !isLoading && (
-          <Button onClick={this.handleLoadMore} />
-        )}
-        {showModal && (
-          <Modal onClose={this.toggleModal}>
-            <img src={largeImageURL} alt="" />
-          </Modal>
-        )}
-      </div>
-    );
-  }
-}
+  return (
+    <div className={styles.appContainer}>
+      <Searchbar onSubmit={handleSearchSubmit} />
+      <ImageGallery images={images} onImageClick={toggleModal} />
+      {isLoading && <Loader />}
+      {images.length > 0 && !isLoading && (
+        <Button onClick={handleLoadMore}>Load more</Button>
+      )}
+      {showModal && (
+        <Modal onClose={toggleModal}>
+          <img src={largeImageURL} alt="" />
+        </Modal>
+      )}
+    </div>
+  );
+};
 
 export default App;
